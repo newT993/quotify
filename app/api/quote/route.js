@@ -1,9 +1,18 @@
+let cachedQuotes = [];
+let lastFetchTime = 0;
+
 export async function GET() {
   try {
-    const response = await fetch('https://zenquotes.io/api/random');
-    const data = await response.json();
-    
-    return new Response(JSON.stringify(data), {
+    const now = Date.now();
+    if (cachedQuotes.length === 0 || now - lastFetchTime > 30000) {
+      const response = await fetch('https://zenquotes.io/api/quotes');
+      const data = await response.json();
+      cachedQuotes = data;
+      lastFetchTime = now;
+    }
+
+    const randomQuote = cachedQuotes[Math.floor(Math.random() * cachedQuotes.length)];
+    return new Response(JSON.stringify(randomQuote), {
       headers: {
         'Content-Type': 'application/json',
       },

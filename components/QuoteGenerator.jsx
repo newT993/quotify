@@ -36,9 +36,10 @@ export default function QuoteGenerator() {
         fetch('/api/quote'),
         fetchBackground(quote?.tags?.[0] || 'inspiration')
       ]);
-
+      
       if (!quoteResponse.ok) throw new Error('Failed to fetch quote');
       const quoteData = await quoteResponse.json();
+      console.log('Quote Response:', quoteData);
       if (bgUrl) {
         const img = new Image();
         setBgUrl(bgUrl)
@@ -48,7 +49,7 @@ export default function QuoteGenerator() {
         };
       }
 
-      setQuote(quoteData[0]);
+      setQuote(quoteData);
       setAnimate(true);
     } catch (error) {
       setError(error.message || 'Failed to fetch quote. Please try again.');
