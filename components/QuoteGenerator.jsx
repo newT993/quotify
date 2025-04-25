@@ -1,7 +1,13 @@
 "use client"
 import { useState, useEffect } from 'react'
 import { ArrowPathIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
-
+const POPULAR_TAGS = [
+  { id: 'daily', label: 'Quote of the Day' },
+  { id: 'inspiration', label: 'Inspirational' },
+  { id: 'funny', label: 'Funny' },
+  { id: 'love', label: 'Love' },
+  { id: 'simplicity', label: 'Simplicity' }
+];
 export default function QuoteGenerator() {
   const [quote, setQuote] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -12,6 +18,7 @@ export default function QuoteGenerator() {
   const [bgUrl, setBgUrl] = useState(null)
   const [photographer, setPhotographer] = useState(null)
   const [photographerUrl, setPhotographerUrl] = useState(null)
+  const [selectedTag, setSelectedTag] = useState('daily')
 
   const fetchBackground = async (query = 'nature') => {
     try {
@@ -27,22 +34,22 @@ export default function QuoteGenerator() {
     }
   }
 
-  const fetchQuote = async () => {
+  const fetchQuote = async (tag = selectedTag || 'daily') => {
     setError(null)
     setLoading(true)
     setBgLoaded(false)
     try {
       const [quoteResponse, bgUrl] = await Promise.all([
-        fetch('/api/quote'),
-        fetchBackground(quote?.tags?.[0] || 'inspiration')
+        fetch(`/api/quote${tag === 'daily' ? '' : `?tag=${encodeURIComponent(tag)}`}`),
+        fetchBackground(tag)
       ]);
       
       if (!quoteResponse.ok) throw new Error('Failed to fetch quote');
       const quoteData = await quoteResponse.json();
-      console.log('Quote Response:', quoteData);
+
       if (bgUrl) {
         const img = new Image();
-        setBgUrl(bgUrl)
+        setBgUrl(bgUrl);
         img.src = bgUrl;
         img.onload = () => {
           setBgLoaded(true);
@@ -62,7 +69,8 @@ export default function QuoteGenerator() {
   const copyToClipboard = async () => {
     if (!quote) return
     try {
-      await navigator.clipboard.writeText(`${quote.q} - ${quote.a}`)
+      // Update to use FavQs API response format
+      await navigator.clipboard.writeText(`${quote.body} - ${quote.author}`)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
@@ -72,7 +80,7 @@ export default function QuoteGenerator() {
 
   useEffect(() => {
     fetchQuote()
-  }, [])
+  }, [selectedTag])
 
   return (
     <div className="max-w-2xl mx-auto  p-4">
@@ -102,6 +110,22 @@ export default function QuoteGenerator() {
           )}
         </div>
       <div className="  bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-10 border border-gray-100 rounded-lg p-6 relative">
+        <div className="mb-6 flex flex-wrap gap-2">
+          {POPULAR_TAGS.map(tag => (
+            <button
+              key={tag.id}
+              onClick={() => setSelectedTag(tag.id)}
+              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                selectedTag === tag.id
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {tag.label}
+            </button>
+          ))}
+        </div>
+        
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
             <p>{error}</p>
@@ -126,9 +150,18 @@ export default function QuoteGenerator() {
             onTransitionEnd={() => setAnimate(false)}
           >
             <blockquote className="text-xl italic mb-4">
-              "{quote.q}"
+              "{quote.body}"
             </blockquote>
-            <p className="text-right font-semibold">- {quote.a}</p>
+            <p className="text-right font-semibold">- {quote.author}</p>
+            {quote.tags && quote.tags.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {quote.tags.map(tag => (
+                  <span key={tag} className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           !error && <p className="text-center">Loading initial quote...</p>
@@ -136,7 +169,7 @@ export default function QuoteGenerator() {
 
         <div className="mt-6 flex justify-center gap-4">
           <button
-            onClick={fetchQuote}
+            onClick={() => fetchQuote(selectedTag)}
             disabled={loading}
             className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2"
           >
